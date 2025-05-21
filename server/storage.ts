@@ -342,23 +342,56 @@ export class MemStorage implements IStorage {
     const sampleRestaurants: Restaurant[] = [];
     const now = new Date();
     
-    // Detect food type from query
+    // Extract potential food type from query
+    // First try to find known food types
     let foodType = "restaurant";
-    if (lowerQuery.includes("sushi") || lowerQuery.includes("japanese")) {
-      foodType = "Japanese";
-    } else if (lowerQuery.includes("indian") || lowerQuery.includes("curry") || lowerQuery.includes("samosa")) {
-      foodType = "Indian";
-    } else if (lowerQuery.includes("italian") || lowerQuery.includes("pizza") || lowerQuery.includes("pasta")) {
-      foodType = "Italian";
-    } else if (lowerQuery.includes("chinese")) {
-      foodType = "Chinese";
-    } else if (lowerQuery.includes("burger") || lowerQuery.includes("american")) {
-      foodType = "American";
-    } else if (lowerQuery.includes("thai")) {
-      foodType = "Thai";
-    } else if (lowerQuery.includes("mexican") || lowerQuery.includes("taco")) {
-      foodType = "Mexican";
+    
+    // Common food cuisine mapping
+    const cuisineMap = {
+      "japanese": ["sushi", "ramen", "teriyaki", "tempura", "japanese", "sashimi"],
+      "indian": ["curry", "samosa", "naan", "tandoori", "indian", "masala", "biryani"],
+      "italian": ["pizza", "pasta", "risotto", "italian", "gelato", "tiramisu"],
+      "chinese": ["chinese", "dim sum", "wonton", "dumpling", "szechuan", "lo mein", "fried rice"],
+      "thai": ["thai", "pad thai", "tom yum", "satay", "curry"],
+      "mexican": ["taco", "burrito", "mexican", "quesadilla", "enchilada", "guacamole"],
+      "american": ["burger", "steak", "bbq", "grill", "american", "hot dog", "sandwich"],
+      "greek": ["gyro", "greek", "souvlaki", "moussaka", "feta"],
+      "vietnamese": ["pho", "vietnamese", "banh mi", "spring roll"],
+      "korean": ["korean", "bibimbap", "bulgogi", "kimchi", "kbbq"],
+      "french": ["french", "croissant", "patisserie", "crepe", "escargot", "baguette"],
+      "middle eastern": ["falafel", "hummus", "kebab", "shawarma", "middle eastern", "mediterranean"],
+      "spanish": ["tapas", "paella", "spanish"],
+      "vegetarian": ["vegetarian", "vegan", "plant-based"],
+      "dessert": ["ice cream", "cake", "chocolate", "dessert", "bakery", "pastry", "cookie", "donut"],
+      "seafood": ["seafood", "fish", "sushi", "crab", "lobster", "shrimp", "oyster"]
+    };
+    
+    // Extract food type from query
+    let extractedFoodType = "";
+    for (const [cuisine, keywords] of Object.entries(cuisineMap)) {
+      if (keywords.some(keyword => lowerQuery.includes(keyword))) {
+        extractedFoodType = cuisine;
+        break;
+      }
     }
+    
+    // If we couldn't identify a cuisine, use any word that might be a food type
+    if (!extractedFoodType) {
+      // Remove common words to isolate potential food types
+      const commonWords = ["food", "restaurant", "best", "cheap", "expensive", "good", "great", "top", "rated", "in", "near", "around", "most", "authentic", "favorite", "popular", "recommended", "tasty", "delicious"];
+      
+      // Split the query into words and remove common words
+      const words = lowerQuery.split(/\s+/).filter(word => !commonWords.includes(word));
+      
+      // Use the remaining words as potential food types
+      if (words.length > 0) {
+        // Capitalize the first letter to make it look like a cuisine type
+        extractedFoodType = words[0].charAt(0).toUpperCase() + words[0].slice(1);
+      }
+    }
+    
+    // Use the extracted food type if found, otherwise fallback to generic "restaurant"
+    foodType = extractedFoodType || "restaurant";
     
     // Check if "all you can eat" or "buffet" is in the query
     const isBuffet = lowerQuery.includes("all you can eat") || lowerQuery.includes("ayce") || lowerQuery.includes("buffet");
@@ -366,63 +399,130 @@ export class MemStorage implements IStorage {
     // Check if "authentic" is in the query
     const isAuthentic = lowerQuery.includes("authentic") || lowerQuery.includes("traditional");
     
-    // Generate restaurant names based on food type
+    // Generate restaurant names based on food type and other query characteristics
     const restaurantNames: {name: string, categories: string[], price: string, rating: number}[] = [];
     
-    if (foodType === "Japanese" && isBuffet) {
-      restaurantNames.push(
-        {name: "Sushi Unlimited", categories: ["Japanese", "Buffet", "Sushi"], price: "$$", rating: 4.2},
-        {name: "Tokyo Buffet", categories: ["Japanese", "Buffet", "Asian Fusion"], price: "$$", rating: 4.0},
-        {name: "Sakura All-You-Can-Eat", categories: ["Japanese", "Sushi", "Buffet"], price: "$$", rating: 4.3}
-      );
-    } else if (foodType === "Japanese") {
-      restaurantNames.push(
-        {name: "Tokyo Sushi", categories: ["Japanese", "Sushi", "Asian"], price: "$$", rating: 4.5},
-        {name: "Osaka Japanese Restaurant", categories: ["Japanese", "Sushi", "Tempura"], price: "$$$", rating: 4.7},
-        {name: "Sakura Sushi", categories: ["Japanese", "Sushi", "Ramen"], price: "$$", rating: 4.4}
-      );
-    } else if (foodType === "Indian" && isAuthentic) {
-      restaurantNames.push(
-        {name: "Authentic Tandoor", categories: ["Indian", "Traditional", "Curry"], price: "$$", rating: 4.6},
-        {name: "Royal Masala House", categories: ["Indian", "Authentic", "Vegetarian-Friendly"], price: "$$", rating: 4.5},
-        {name: "Punjab Authentic Kitchen", categories: ["Indian", "Traditional", "Tandoori"], price: "$$$", rating: 4.8}
-      );
-    } else if (foodType === "Indian") {
-      restaurantNames.push(
-        {name: "Taste of India", categories: ["Indian", "Curry", "Vegetarian-Friendly"], price: "$$", rating: 4.3},
-        {name: "Curry Palace", categories: ["Indian", "Takeout", "Curry"], price: "$$", rating: 4.1},
-        {name: "Taj Mahal Restaurant", categories: ["Indian", "Fine Dining", "Tandoori"], price: "$$$", rating: 4.7}
-      );
-    } else if (foodType === "Italian") {
-      restaurantNames.push(
-        {name: "Pasta Paradise", categories: ["Italian", "Pasta", "Pizza"], price: "$$", rating: 4.5},
-        {name: "Milano's Pizzeria", categories: ["Italian", "Pizza", "Casual"], price: "$$", rating: 4.2},
-        {name: "Trattoria Bella", categories: ["Italian", "Fine Dining", "Wine Bar"], price: "$$$", rating: 4.6}
-      );
-    } else if (foodType === "Chinese") {
-      restaurantNames.push(
-        {name: "Golden Dragon", categories: ["Chinese", "Dim Sum", "Asian"], price: "$$", rating: 4.3},
-        {name: "Wok & Roll", categories: ["Chinese", "Takeout", "Noodles"], price: "$", rating: 4.0},
-        {name: "Peking Palace", categories: ["Chinese", "Traditional", "Dim Sum"], price: "$$", rating: 4.2}
-      );
-    } else if (foodType === "American") {
-      restaurantNames.push(
-        {name: "Burger Joint", categories: ["American", "Burgers", "Casual"], price: "$", rating: 4.1},
-        {name: "Grill & Chill", categories: ["American", "BBQ", "Steakhouse"], price: "$$", rating: 4.4},
-        {name: "Classic Diner", categories: ["American", "Breakfast", "Burgers"], price: "$", rating: 4.0}
-      );
-    } else if (foodType === "Thai") {
-      restaurantNames.push(
-        {name: "Thai Orchid", categories: ["Thai", "Curry", "Asian"], price: "$$", rating: 4.5},
-        {name: "Bangkok Kitchen", categories: ["Thai", "Noodles", "Curry"], price: "$$", rating: 4.3},
-        {name: "Pad Thai Paradise", categories: ["Thai", "Street Food", "Casual"], price: "$", rating: 4.2}
-      );
-    } else if (foodType === "Mexican") {
-      restaurantNames.push(
-        {name: "Taco Fiesta", categories: ["Mexican", "Tacos", "Casual"], price: "$", rating: 4.2},
-        {name: "Cantina Mexicana", categories: ["Mexican", "Traditional", "Tequila Bar"], price: "$$", rating: 4.5},
-        {name: "El Sombrero", categories: ["Mexican", "Tex-Mex", "Family Friendly"], price: "$$", rating: 4.1}
-      );
+    // Generic restaurant name templates with [CUISINE] as placeholder
+    const restaurantTemplates = [
+      {
+        nameTemplates: [
+          "[CUISINE] House", 
+          "[CUISINE] Kitchen", 
+          "[CUISINE] Palace", 
+          "[CUISINE] Garden", 
+          "The [CUISINE] Spot"
+        ],
+        categories: ["[CUISINE]", "Casual", "Family Friendly"],
+        price: "$$",
+        ratingRange: [3.9, 4.3]
+      },
+      {
+        nameTemplates: [
+          "Authentic [CUISINE]", 
+          "Traditional [CUISINE] Kitchen", 
+          "Old World [CUISINE]", 
+          "[CUISINE] Heritage"
+        ],
+        categories: ["[CUISINE]", "Traditional", "Authentic"],
+        price: "$$",
+        ratingRange: [4.2, 4.7]
+      },
+      {
+        nameTemplates: [
+          "Gourmet [CUISINE]", 
+          "[CUISINE] Fine Dining", 
+          "Upscale [CUISINE]"
+        ],
+        categories: ["[CUISINE]", "Fine Dining", "Upscale"],
+        price: "$$$",
+        ratingRange: [4.5, 4.9]
+      },
+      {
+        nameTemplates: [
+          "Quick [CUISINE]", 
+          "[CUISINE] Express", 
+          "[CUISINE] To Go", 
+          "Fast [CUISINE]"
+        ],
+        categories: ["[CUISINE]", "Takeout", "Quick Bite"],
+        price: "$",
+        ratingRange: [3.7, 4.2]
+      },
+      {
+        nameTemplates: [
+          "[CUISINE] & More",
+          "[CUISINE] Fusion",
+          "Modern [CUISINE]",
+          "[CUISINE] Remix"
+        ],
+        categories: ["[CUISINE]", "Fusion", "Modern"],
+        price: "$$",
+        ratingRange: [4.0, 4.5]
+      }
+    ];
+    
+    // Special case for buffet
+    if (isBuffet) {
+      restaurantTemplates.push({
+        nameTemplates: [
+          "[CUISINE] Buffet",
+          "All-You-Can-Eat [CUISINE]",
+          "[CUISINE] Unlimited",
+          "Endless [CUISINE]"
+        ],
+        categories: ["[CUISINE]", "Buffet", "All-You-Can-Eat"],
+        price: "$$",
+        ratingRange: [3.8, 4.3]
+      });
+    }
+    
+    // Special case for authentic traditional
+    if (isAuthentic) {
+      restaurantTemplates.push({
+        nameTemplates: [
+          "Authentic [CUISINE] House",
+          "Traditional [CUISINE] Kitchen",
+          "[CUISINE] Heritage",
+          "Old World [CUISINE]"
+        ],
+        categories: ["[CUISINE]", "Traditional", "Authentic"],
+        price: "$$",
+        ratingRange: [4.3, 4.8]
+      });
+    }
+    
+    // Generate names based on the templates
+    // Select random templates to generate a mix of restaurant types
+    const selectedTemplates = [];
+    const numRestaurantsToGenerate = 3 + Math.floor(Math.random() * 4); // Generate 3-6 restaurants
+    
+    // Shuffle templates to get random selection
+    const shuffledTemplates = [...restaurantTemplates].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < Math.min(numRestaurantsToGenerate, shuffledTemplates.length); i++) {
+      selectedTemplates.push(shuffledTemplates[i]);
+    }
+    
+    // Create restaurants from templates
+    for (const template of selectedTemplates) {
+      // Pick a random name template from the options
+      const nameTemplate = template.nameTemplates[Math.floor(Math.random() * template.nameTemplates.length)];
+      
+      // Replace [CUISINE] with actual food type
+      const name = nameTemplate.replace(/\[CUISINE\]/g, foodType);
+      
+      // Generate categories, replacing [CUISINE] with food type
+      const categories = template.categories.map(c => c.replace(/\[CUISINE\]/g, foodType));
+      
+      // Generate a random rating within the given range
+      const [minRating, maxRating] = template.ratingRange;
+      const rating = parseFloat((minRating + Math.random() * (maxRating - minRating)).toFixed(1));
+      
+      restaurantNames.push({
+        name,
+        categories,
+        price: template.price,
+        rating
+      });
     }
     
     // Create sample restaurants
