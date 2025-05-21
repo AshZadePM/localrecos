@@ -128,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
-          model: "openai/gpt-3.5-turbo",
+          model: "deepseek/deepseek-chat-v3-0324",
           messages: [{ role: "user", content: extractionPrompt }],
           response_format: { type: "json_object" }
         },
@@ -282,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
-          model: "openai/gpt-3.5-turbo",
+          model: "deepseek/deepseek-chat-v3-0324",
           messages: [{ role: "user", content: sentimentPrompt }],
           response_format: { type: "json_object" }
         },
