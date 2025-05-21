@@ -12,28 +12,11 @@ const ResultsSection: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   
   const { data: restaurants, isLoading, error } = useQuery({
-    queryKey: ["/api/search", searchQuery, city],
-    queryFn: async () => {
-      console.log("Sending search request with params:", { query: searchQuery, city });
-      
-      // Only proceed if we have a query or city
-      if (!searchQuery && !city) {
-        console.log("No search parameters provided");
-        return [];
-      }
-      
-      try {
-        const response = await apiRequest("POST", "/api/search", {
-          query: searchQuery,
-          city: city
-        });
-        const data = await response.json();
-        console.log("Search results received:", data);
-        return data;
-      } catch (err) {
-        console.error("Error fetching search results:", err);
-        throw err;
-      }
+    queryKey: ["/api/search", { query: searchQuery, city }],
+    queryFn: async ({ queryKey }) => {
+      const [_, params] = queryKey;
+      const response = await apiRequest("POST", "/api/search", params);
+      return response.json();
     },
     enabled: !!searchQuery || !!city,
   });

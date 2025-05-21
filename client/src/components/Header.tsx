@@ -38,7 +38,6 @@ const Header: React.FC = () => {
     e.preventDefault();
     
     if (searchInput.trim()) {
-      console.log("Submitting search for:", searchInput);
       handleSearch(searchInput);
       setIsFocused(false);
       navigate("/results");
