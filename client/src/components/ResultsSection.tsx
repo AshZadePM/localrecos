@@ -7,18 +7,29 @@ import { FilterChip } from "@/components/ui/filter-chip";
 import EmptyState from "@/components/EmptyState";
 import { Restaurant } from "@/lib/types";
 
-const ResultsSection: React.FC = () => {
-  const { searchQuery, city } = useSearch();
+interface ResultsSectionProps {
+  loading?: boolean;
+}
+
+const ResultsSection: React.FC<ResultsSectionProps> = ({ loading }) => {
+  const { city } = useSearch();
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   
-  const { data: restaurants, isLoading, error } = useQuery({
-    queryKey: ["/api/search", { query: searchQuery, city }],
+  // Get restaurants for the detected city
+  const { data: restaurants, isLoading: isLoadingRestaurants, error } = useQuery({
+    queryKey: ["/api/cities", city, "restaurants"],
     queryFn: async ({ queryKey }) => {
-      const [_, params] = queryKey;
-      const response = await apiRequest("POST", "/api/search", params);
+      const [_, detectedCity] = queryKey;
+      if (!detectedCity) return [];
+      
+      // Fetch restaurants for this city
+      const response = await fetch(`/api/cities/${detectedCity}/restaurants`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch restaurants for city");
+      }
       return response.json();
     },
-    enabled: !!searchQuery || !!city,
+    enabled: !!city,
   });
 
   const filteredRestaurants = React.useMemo(() => {
@@ -34,7 +45,6 @@ const ResultsSection: React.FC = () => {
           break;
         case "open":
           // In a real app, we would filter by open/closed status
-          // Since we don't have that data, this is just a demonstration
           results = results;
           break;
         case "highlyRated":
@@ -50,6 +60,8 @@ const ResultsSection: React.FC = () => {
     setActiveFilter(activeFilter === filter ? null : filter);
   };
 
+  const isLoading = loading || isLoadingRestaurants;
+
   if (isLoading) {
     return (
       <section className="py-12" id="results-section">
@@ -57,21 +69,21 @@ const ResultsSection: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
             <div>
               <h2 className="text-2xl font-bold mb-2">
-                Searching for results...
+                Finding local recommendations...
               </h2>
-              <p className="text-gray-medium">Finding recommendations from Reddit</p>
+              <p className="text-gray-medium">Discovering restaurants from Reddit discussions in your area</p>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="skeleton h-48 w-full"></div>
+                <div className="skeleton h-48 w-full bg-gray-200 animate-pulse"></div>
                 <div className="p-4">
-                  <div className="skeleton h-6 w-3/4 mb-4 rounded"></div>
-                  <div className="skeleton h-4 w-full mb-2 rounded"></div>
-                  <div className="skeleton h-4 w-5/6 mb-4 rounded"></div>
-                  <div className="skeleton h-10 w-full mt-4 rounded"></div>
+                  <div className="skeleton h-6 w-3/4 mb-4 rounded bg-gray-200 animate-pulse"></div>
+                  <div className="skeleton h-4 w-full mb-2 rounded bg-gray-200 animate-pulse"></div>
+                  <div className="skeleton h-4 w-5/6 mb-4 rounded bg-gray-200 animate-pulse"></div>
+                  <div className="skeleton h-10 w-full mt-4 rounded bg-gray-200 animate-pulse"></div>
                 </div>
               </div>
             ))}
@@ -86,13 +98,11 @@ const ResultsSection: React.FC = () => {
       <section className="py-12" id="results-section">
         <div className="container mx-auto px-4">
           <div className="bg-white p-8 rounded-lg shadow text-center">
-            <div className="text-6xl mb-4 text-error">
-              <i className="fas fa-exclamation-triangle"></i>
-            </div>
+            <div className="text-6xl mb-4 text-red-600">⚠️</div>
             <h3 className="text-xl font-bold mb-2">Error Loading Results</h3>
             <p className="text-gray-medium mb-6">
               Something went wrong while fetching restaurant recommendations.
-              Please try again later.
+              Please try again later or check your location settings.
             </p>
           </div>
         </div>
@@ -101,7 +111,7 @@ const ResultsSection: React.FC = () => {
   }
 
   if (!filteredRestaurants || filteredRestaurants.length === 0) {
-    return <EmptyState query={searchQuery} city={city} />;
+    return <EmptyState city={city} />;
   }
 
   return (
@@ -110,19 +120,14 @@ const ResultsSection: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h2 className="text-2xl font-bold mb-2">
-              {searchQuery ? (
-                <>
-                  <span className="text-primary">{searchQuery}</span>
-                  {city && <> in <span className="text-accent">{city}</span></>}
-                </>
+              {city ? (
+                <>Local Recommendations in <span className="text-accent">{city}</span></>
               ) : (
-                <>
-                  Restaurants in <span className="text-accent">{city}</span>
-                </>
+                <>Recommended Restaurants</>
               )}
             </h2>
             <p className="text-gray-medium">
-              Found from {city ? `r/${city}` : 'Reddit'} subreddit discussions
+              Found from {city ? `r/${city.toLowerCase()}` : 'Reddit'} subreddit discussions
             </p>
           </div>
           
