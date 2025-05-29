@@ -78,7 +78,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         extractedData = { city: null, foodType: String(input) };
       }
       // Compose a prompt for Gemini to recommend restaurants
-      const prompt = `You're a restaurant recommendation engine that sources recommendations from training data from sites like reddit. You should make recommendations based on how many times a restaurant is mentioned, upvotes, and recency.\nWhat are the best ${extractedData.foodType} ${extractedData.city ? `restaurants in ${extractedData.city}` : 'restaurants'}?\nPlease provide a list with names and a short reason for each recommendation. Return the results in json format with "title" and "recommendationText"`;
+      // Include the full original input (including adjectives) in the prompt for context
+      const prompt = `You're a restaurant recommendation engine that sources recommendations from training data from sites like reddit. You should make recommendations based on how many times a restaurant is mentioned, upvotes, and recency.\nThe user search query is: "${input}"\nWhat are the best ${extractedData.foodType} ${extractedData.city ? `restaurants in ${extractedData.city}` : 'restaurants'} that match the user's query?\nPlease provide a list with names and a short reason for each recommendation. Return the results in json format with "title" and "recommendationText"`;
       const geminiResponse = await axios.post(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey,
         {
@@ -298,11 +299,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       // Log the city of each returned place
       if (response.data && Array.isArray(response.data.places)) {
-        response.data.places.forEach((place, idx) => {
+        response.data.places.forEach((place: any, idx: number) => {
           const address = place.formattedAddress || place.formatted_address || '';
           // Try to extract city from address (split by comma, take second-to-last or use regex)
           let cityInAddress = '';
-          const parts = address.split(',').map(s => s.trim());
+          const parts = address.split(',').map((s: string) => s.trim());
           if (parts.length >= 2) cityInAddress = parts[parts.length - 2];
           // Fallback: regex for city
           const match = address.match(/,\s*([^,]+),\s*[A-Z]{2}\s*\d{5}/);
