@@ -327,13 +327,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!photoName || typeof photoName !== 'string') {
       return res.status(400).json({ message: "Missing or invalid photoName parameter" });
     }
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY || "AIzaSyAEYND7MxPpHk6LX5CTY0wfNxHBmHrQF34";
+    // Always use the provided API key for Google Places photos
+    const apiKey = "AIzaSyBIyipLfGhkt-IaGdHc4PwugL3QbMVe0vI";
     // Remove any leading slash for safety
     let cleanPhotoName = photoName;
     if (cleanPhotoName.startsWith('/')) cleanPhotoName = cleanPhotoName.slice(1);
     // Defensive: decode if double-encoded
     cleanPhotoName = decodeURIComponent(cleanPhotoName);
-    const url = `https://places.googleapis.com/v1/${cleanPhotoName}/media?key=${apiKey}`;
+    console.log('[Google Places Photo API] cleanPhotoName:', cleanPhotoName);
+    const url = `https://places.googleapis.com/v1/${cleanPhotoName}/media?maxWidthPx=650&key=${apiKey}`;
+    console.log('[Google Places Photo API] Fetching photo:', url);
     try {
       const response = await axios.get(url, { responseType: 'stream' });
       res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');

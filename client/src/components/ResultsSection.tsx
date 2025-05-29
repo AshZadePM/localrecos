@@ -35,12 +35,14 @@ async function fetchGooglePlaceData(title: string, city: string) {
   // Fallback: just use the first result
   || data.places[0];
   
-    // Add photo field if available
+    // Log the full Google Places API response for this restaurant for debugging
+    console.log('Google Places API match for', title, city, match);
+
+    // Use the first photo name from the Google Places response if available
     let photoUrl = null;
-    if (match.photos && match.photos.length > 0 && match.photos[0].name) {
-      // Google Places Photos API v1: https://developers.google.com/maps/documentation/places/web-service/photos
-      // Example: https://places.googleapis.com/v1/{photo_reference}/media?maxWidthPx=400&key=API_KEY
-      photoUrl = `https://places.googleapis.com/v1/${match.photos[0].name}/media?maxWidthPx=600&key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY || ''}`;
+    if (match.photos && Array.isArray(match.photos) && match.photos.length > 0 && match.photos[0].name) {
+      // Use the exact string returned by Google Places for the photoName (no encodeURIComponent)
+      photoUrl = `/api/google-places-photo?photoName=${match.photos[0].name}`;
     }
     return {
       address: match.formattedAddress || match.formatted_address || null,

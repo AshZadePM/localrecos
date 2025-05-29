@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Hero from "@/components/Hero";
-import PopularCities from "@/components/PopularCities";
-import FoodCategories from "@/components/FoodCategories";
+// import PopularCities from "@/components/PopularCities";
+// import FoodCategories from "@/components/FoodCategories";
 import AppFeatures from "@/components/AppFeatures";
 import NLPQueryForm from "@/components/NLPQueryForm";
 import ResultsSection from "@/components/ResultsSection";
@@ -23,8 +23,8 @@ const Home: React.FC = () => {
         <NLPQueryForm onSearch={handleSearch} />
         <ResultsSection recommendations={recommendations} extraction={extraction} />
       </div>
-      <PopularCities />
-      <FoodCategories />
+      {/* <PopularCities /> */}
+      {/* <FoodCategories /> */}
       <AppFeatures />
     </>
   );
