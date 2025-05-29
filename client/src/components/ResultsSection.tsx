@@ -64,8 +64,17 @@ interface Recommendation {
 
 const ResultsSection: React.FC<{ results?: any[]; recommendations?: Recommendation[]; extraction?: { city?: string } }> = ({ results, recommendations, extraction }) => {
   const [places, setPlaces] = useState<any[]>([]);
-  // Use city from extraction if
+  // Use city and foodType from extraction if available
   const city = extraction?.city;
+  const foodType = (extraction as any)?.foodType || "restaurants";
+
+  // Determine heading: if the search is for 'hidden gems', use the hidden gems heading, otherwise use the generic heading
+  let resultsTitle = undefined;
+  if (foodType === 'hidden gems') {
+    resultsTitle = city ? `Here are some hidden gems in ${city}.` : undefined;
+  } else {
+    resultsTitle = city ? `Here are some recommendations for ${foodType} in ${city}.` : undefined;
+  }
 
   useEffect(() => {
     if (!recommendations || !recommendations.length) return;
@@ -92,12 +101,19 @@ const ResultsSection: React.FC<{ results?: any[]; recommendations?: Recommendati
   return (
     <section className="py-12" id="results-section">
       <div className="container mx-auto px-4">
+        <h2 className="text-2xl font-bold mb-8 text-center">
+          {resultsTitle}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {places.map((place, idx) => (
             <div key={place.name + idx} className="bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col">
-              {place.photoUrl && (
+              {place.photoUrl && place.mapUrl ? (
+                <a href={place.mapUrl} target="_blank" rel="noopener noreferrer">
+                  <img src={place.photoUrl} alt={place.name} className="w-full h-48 object-cover mb-3 rounded" loading="lazy" />
+                </a>
+              ) : place.photoUrl ? (
                 <img src={place.photoUrl} alt={place.name} className="w-full h-48 object-cover mb-3 rounded" loading="lazy" />
-              )}
+              ) : null}
               <h3 className="text-xl font-bold mb-2">
                 {place.website || place.mapUrl ? (
                   <a href={place.website || place.mapUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">

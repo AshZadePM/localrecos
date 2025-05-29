@@ -79,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Compose a prompt for Gemini to recommend restaurants
       // Include the full original input (including adjectives) in the prompt for context
-      const prompt = `You're a restaurant recommendation engine that sources recommendations from training data from sites like reddit. You should make recommendations based on how many times a restaurant is mentioned, upvotes, and recency.\nThe user search query is: "${input}"\nWhat are the best ${extractedData.foodType} ${extractedData.city ? `restaurants in ${extractedData.city}` : 'restaurants'} that match the user's query?\nPlease provide a list with names and a short reason for each recommendation. Return the results in json format with "title" and "recommendationText"`;
+      const prompt = `You're a restaurant recommendation engine that sources recommendations from training data from sites like reddit. You should make recommendations based on how many times a restaurant is mentioned, upvotes, and recency.\nThe user search query is: "${input}"\nWhat are the best ${extractedData.foodType} ${extractedData.city ? `restaurants in ${extractedData.city}` : 'restaurants'} that match the user's query?\nPlease provide a list with names and a short reason for each recommendation. Return 10 results and the results in json format with "title" and "recommendationText"`;
       const geminiResponse = await axios.post(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey,
         {
