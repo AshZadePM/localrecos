@@ -3,7 +3,6 @@ import Hero from "@/components/Hero";
 // import PopularCities from "@/components/PopularCities";
 // import FoodCategories from "@/components/FoodCategories";
 import AppFeatures from "@/components/AppFeatures";
-import NLPQueryForm from "@/components/NLPQueryForm";
 import ResultsSection from "@/components/ResultsSection";
 
 const Home: React.FC = () => {
@@ -60,9 +59,9 @@ const Home: React.FC = () => {
 
   return (
     <>
-      <Hero />
-      <div className="container mx-auto px-4 py-8">
-        <NLPQueryForm onSearch={handleSearch} />
+      <Hero onSearch={handleSearch} />
+      <div className="container mx-auto px-4">
+        {/* Remove NLPQueryForm here, since it's now in Hero and wired up */}
         <ResultsSection recommendations={recommendations} extraction={extraction} />
       </div>
       {/* <PopularCities /> */}
