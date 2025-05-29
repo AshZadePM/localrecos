@@ -38,7 +38,7 @@ const NLPQueryForm: React.FC<NLPQueryFormProps> = ({ onSearch }) => {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-2 mb-6">
       <input
-        className="border rounded px-3 py-2"
+        className="border rounded px-3 py-2 text-black"
         type="text"
         placeholder="e.g. authentic Indian in Ottawa"
         value={input}

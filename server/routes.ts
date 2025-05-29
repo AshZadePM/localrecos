@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const systemPrompt = `You're a restaurant recommendation engine that sources recommendations from training data from sites like reddit. You should make recommendations based on how many times a restaurant is mentioned + upvotes + recency.\n\nReturn a list of restaurant names and a summary of user feedback for each. It should be returned in a format that's easy for the app to parse to display in the front end.\n\nUse the list to create a restaurant card per restaurant.`;
       // Extraction prompt remains the same
-      const extractionPrompt = `Extract the city and food type from this search query. If a city is not explicitly mentioned, return null for city.\n\nQuery: "${input}"\n\nRespond in this JSON format:\n{\n  "city": "city name or null if not specified",\n  "foodType": "type of food or dish they're looking for"\n}`;
+      const extractionPrompt = `Extract the city and food type, including adjectives used to describe the food, from this search query. If a city is not explicitly mentioned, return null for city.\n\nQuery: "${input}"\n\nRespond in this JSON format:\n{\n  "city": "city name or null if not specified",\n  "foodType": "type of food or dish they're looking for and any adjectives and qualifiers, like authentic, affordable, cheap, big portions, etc."\n}`;
       const extractionResponse = await axios.post(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey,
         {
