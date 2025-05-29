@@ -1,3 +1,11 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+import { fileURLToPath } from 'url';
+import path from 'path';
+import dotenv from 'dotenv';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') }); // Explicitly load .env from server directory
+console.log("OPENROUTER_API_KEY:", process.env.OPENROUTER_API_KEY);
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";

@@ -1,5 +1,4 @@
 import React from "react";
-import { useLocation } from "wouter";
 import { useSearch } from "@/hooks/useSearch";
 
 interface CityProps {
@@ -9,8 +8,7 @@ interface CityProps {
 }
 
 const PopularCities: React.FC = () => {
-  const [_, navigate] = useLocation();
-  const { setCity } = useSearch();
+  const { handleSearch } = useSearch();
 
   const cities: CityProps[] = [
     {
@@ -36,8 +34,7 @@ const PopularCities: React.FC = () => {
   ];
 
   const handleCityClick = (city: string) => {
-    setCity(city);
-    navigate("/results");
+    handleSearch(`restaurants in ${city}`);
   };
 
   return (

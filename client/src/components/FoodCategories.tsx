@@ -23,8 +23,8 @@ const FoodCategories: React.FC = () => {
   ];
 
   const handleCategoryClick = (category: string) => {
+    // Use natural language search: e.g. "Pizza in Toronto" or just "Pizza"
     handleSearch(category);
-    navigate("/results");
   };
 
   return (

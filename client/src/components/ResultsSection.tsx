@@ -1,165 +1,135 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSearch } from "@/hooks/useSearch";
-import { apiRequest } from "@/lib/queryClient";
+import React, { useState, useEffect } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import { FilterChip } from "@/components/ui/filter-chip";
 import EmptyState from "@/components/EmptyState";
 import { Restaurant } from "@/lib/types";
 
-const ResultsSection: React.FC = () => {
-  const { searchQuery, city } = useSearch();
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  
-  const { data: restaurants, isLoading, error } = useQuery({
-    queryKey: ["/api/search", { query: searchQuery, city }],
-    queryFn: async ({ queryKey }) => {
-      const [_, params] = queryKey;
-      const response = await apiRequest("POST", "/api/search", params);
-      return response.json();
-    },
-    enabled: !!searchQuery || !!city,
-  });
-
-  const filteredRestaurants = React.useMemo(() => {
-    if (!restaurants) return [];
-    
-    let results = [...restaurants];
-    
-    // Apply active filter if set
-    if (activeFilter) {
-      switch (activeFilter) {
-        case "under15":
-          results = results.filter(r => r.priceRange === "$");
-          break;
-        case "open":
-          // In a real app, we would filter by open/closed status
-          // Since we don't have that data, this is just a demonstration
-          results = results;
-          break;
-        case "highlyRated":
-          results = results.filter(r => r.googleRating && r.googleRating >= 4.5);
-          break;
+// Google Places API fetcher
+async function fetchGooglePlaceData(title: string, city: string) {
+  // Always use the exact Gemini "title" (restaurant name) for the Google Places query
+  const res = await fetch(`/api/google-places?query=${encodeURIComponent(title)}&city=${encodeURIComponent(city)}`);
+  const data = await res.json();
+  if (!data.places || !data.places.length) return null;
+  // Normalize city for comparison
+  const norm = (s: string) => s?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normCity = norm(city);
+  // Find a place that matches the name AND is in the correct city (robust city extraction)
+  const match = (data.places as any[]).find((p: any) => {
+    const nameMatch = norm(p.displayName?.text || p.name) === norm(title);
+    // Try to extract city from address (split by comma, take 2nd or 3rd last)
+    let cityInAddress = null;
+    if (p.formattedAddress) {
+      const parts = p.formattedAddress.split(',').map((s: string) => s.trim());
+      if (parts.length >= 3) {
+        cityInAddress = norm(parts[parts.length - 3]);
+      } else if (parts.length >= 2) {
+        cityInAddress = norm(parts[parts.length - 2]);
       }
     }
-    
-    return results;
-  }, [restaurants, activeFilter]);
+    // Accept match if city in address matches, or fallback to substring match
+    const cityMatch = cityInAddress ? cityInAddress === normCity : (p.formattedAddress?.toLowerCase().includes(city.toLowerCase()));
+    return nameMatch && cityMatch;
+  })
+  // Fallback: match by name only if no city match
+  || (data.places as any[]).find((p: any) => norm(p.displayName?.text || p.name) === norm(title))
+  // Fallback: just use the first result
+  || data.places[0];
+  
+    // Add photo field if available
+    let photoUrl = null;
+    if (match.photos && match.photos.length > 0 && match.photos[0].name) {
+      // Google Places Photos API v1: https://developers.google.com/maps/documentation/places/web-service/photos
+      // Example: https://places.googleapis.com/v1/{photo_reference}/media?maxWidthPx=400&key=API_KEY
+      photoUrl = `https://places.googleapis.com/v1/${match.photos[0].name}/media?maxWidthPx=600&key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY || ''}`;
+    }
+    return {
+      address: match.formattedAddress || match.formatted_address || null,
+      website: match.websiteUri || match.website || null,
+      openNow: match.currentOpeningHours?.openNow ?? match.opening_hours?.open_now,
+      rating: match.rating,
+      placeId: match.id || match.place_id,
+      reviewsUrl: match.userRatingCount || match.user_ratings_total ? `https://www.google.com/maps/place/?q=place_id:${match.id || match.place_id}` : null,
+      mapUrl: match.googleMapsUri || (match.id || match.place_id ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.displayName?.text || match.name)}&query_place_id=${match.id || match.place_id}` : null),
+      name: match.displayName?.text || match.name || title,
+      photoUrl
+    };
+}
 
-  const handleFilterClick = (filter: string) => {
-    setActiveFilter(activeFilter === filter ? null : filter);
-  };
+interface Recommendation {
+  name: string;
+  summary: string;
+}
 
-  if (isLoading) {
-    return (
-      <section className="py-12" id="results-section">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">
-                Searching for results...
-              </h2>
-              <p className="text-gray-medium">Finding recommendations from Reddit</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="skeleton h-48 w-full"></div>
-                <div className="p-4">
-                  <div className="skeleton h-6 w-3/4 mb-4 rounded"></div>
-                  <div className="skeleton h-4 w-full mb-2 rounded"></div>
-                  <div className="skeleton h-4 w-5/6 mb-4 rounded"></div>
-                  <div className="skeleton h-10 w-full mt-4 rounded"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
+const ResultsSection: React.FC<{ results?: any[]; recommendations?: Recommendation[]; extraction?: { city?: string } }> = ({ results, recommendations, extraction }) => {
+  const [places, setPlaces] = useState<any[]>([]);
+  // Use city from extraction if
+  const city = extraction?.city;
+
+  useEffect(() => {
+    if (!recommendations || !recommendations.length) return;
+    // Only fetch Google Places data if city is defined and non-empty
+    if (!city || typeof city !== 'string' || !city.trim()) {
+      setPlaces(recommendations.map(r => ({ ...r, error: 'No city detected in query.' })));
+      return;
+    }
+    Promise.all(
+      recommendations.map(async (r) => {
+        const placeMeta = await fetchGooglePlaceData(r.name, city);
+        return { ...r, ...placeMeta };
+      })
+    ).then(setPlaces);
+  }, [recommendations, city]);
+
+  if (!recommendations || !recommendations.length) {
+    return <EmptyState query={""} city={city} />;
   }
-
-  if (error) {
-    return (
-      <section className="py-12" id="results-section">
-        <div className="container mx-auto px-4">
-          <div className="bg-white p-8 rounded-lg shadow text-center">
-            <div className="text-6xl mb-4 text-error">
-              <i className="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 className="text-xl font-bold mb-2">Error Loading Results</h3>
-            <p className="text-gray-medium mb-6">
-              Something went wrong while fetching restaurant recommendations.
-              Please try again later.
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (!filteredRestaurants || filteredRestaurants.length === 0) {
-    return <EmptyState query={searchQuery} city={city} />;
+  if (!city || typeof city !== 'string' || !city.trim()) {
+    return <EmptyState query={""} city={city} />;
   }
 
   return (
     <section className="py-12" id="results-section">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">
-              {searchQuery ? (
-                <>
-                  <span className="text-primary">{searchQuery}</span>
-                  {city && <> in <span className="text-accent">{city}</span></>}
-                </>
-              ) : (
-                <>
-                  Restaurants in <span className="text-accent">{city}</span>
-                </>
-              )}
-            </h2>
-            <p className="text-gray-medium">
-              Found from {city ? `r/${city}` : 'Reddit'} subreddit discussions
-            </p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
-            <FilterChip
-              active={activeFilter === null}
-              onClick={() => setActiveFilter(null)}
-            >
-              All
-            </FilterChip>
-            <FilterChip
-              variant="outline"
-              active={activeFilter === "under15"}
-              onClick={() => handleFilterClick("under15")}
-            >
-              Under $15
-            </FilterChip>
-            <FilterChip
-              variant="outline"
-              active={activeFilter === "open"}
-              onClick={() => handleFilterClick("open")}
-            >
-              Open Now
-            </FilterChip>
-            <FilterChip
-              variant="outline"
-              active={activeFilter === "highlyRated"}
-              onClick={() => handleFilterClick("highlyRated")}
-            >
-              Highly Rated
-            </FilterChip>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRestaurants.map((restaurant: Restaurant) => (
-            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+          {places.map((place, idx) => (
+            <div key={place.name + idx} className="bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col">
+              {place.photoUrl && (
+                <img src={place.photoUrl} alt={place.name} className="w-full h-48 object-cover mb-3 rounded" loading="lazy" />
+              )}
+              <h3 className="text-xl font-bold mb-2">
+                {place.website || place.mapUrl ? (
+                  <a href={place.website || place.mapUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                    {place.name}
+                  </a>
+                ) : (
+                  place.name
+                )}
+              </h3>
+              {place.address && place.mapUrl && (
+                <a href={place.mapUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm mb-1 block">
+                  {place.address}
+                </a>
+              )}
+              <p className="mb-2 text-gray-700">{place.summary}</p>
+              <div className="flex items-center gap-2 text-sm mb-1">
+                {place.openNow !== undefined && (
+                  place.mapUrl ? (
+                    <a href={place.mapUrl} target="_blank" rel="noopener noreferrer" className={place.openNow ? "text-green-600 underline" : "text-red-600 underline"}>
+                      {place.openNow ? "Open Now" : "Closed"}
+                    </a>
+                  ) : (
+                    <span className={place.openNow ? "text-green-600" : "text-red-600"}>
+                      {place.openNow ? "Open Now" : "Closed"}
+                    </span>
+                  )
+                )}
+                {place.rating && (
+                  <a href={place.reviewsUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-yellow-600">
+                    ⭐ {place.rating}
+                  </a>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       </div>

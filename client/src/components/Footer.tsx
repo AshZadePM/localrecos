@@ -64,7 +64,7 @@ const Footer: React.FC = () => {
             <i className="fab fa-reddit text-gray-400 mr-2"></i>
             <span className="text-gray-400 mr-4">Reddit</span>
             <i className="fas fa-robot text-gray-400 mr-2"></i>
-            <span className="text-gray-400">OpenRouter</span>
+            <span className="text-gray-400">Gemini (Google AI)</span>
           </div>
         </div>
       </div>
