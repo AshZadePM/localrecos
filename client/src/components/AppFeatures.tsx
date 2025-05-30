@@ -29,7 +29,7 @@ const AppFeatures: React.FC = () => {
             </div>
             <h3 className="text-xl font-bold mb-2">AI Analysis</h3>
             <p className="text-gray-medium">
-              Our AI analyzes sentiment in Reddit discussions to determine which places are consistently recommended.
+              AI analyzes real Reddit discussions to determine which places are consistently recommended.
             </p>
           </div>
           
