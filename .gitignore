@@ -6,3 +6,4 @@ vite.config.ts.*
 *.tar.gz# Ignore environment variable files
 .env
 .env.*
+.vercel

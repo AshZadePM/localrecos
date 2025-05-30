@@ -9,6 +9,7 @@ const Home: React.FC = () => {
   const [recommendations, setRecommendations] = useState<any[] | undefined>(undefined);
   const [extraction, setExtraction] = useState<{ city?: string; foodType?: string } | undefined>(undefined);
   const [locationChecked, setLocationChecked] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Handler for NLPQueryForm
   const handleSearch = (recs: any[], extractionArg?: { city?: string; foodType?: string }) => {
@@ -32,6 +33,7 @@ const Home: React.FC = () => {
         const geoData = await geoRes.json();
         const { lat, lng } = geoData.location || {};
         if (lat == null || lng == null) throw new Error("No lat/lng from Google Geolocation API");
+        setUserLocation({ lat, lng }); // Store precise user location for sorting
         const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
         const data = await resp.json();
         const city = data.address?.city || data.address?.town || data.address?.village || data.address?.state;
@@ -61,8 +63,7 @@ const Home: React.FC = () => {
     <>
       <Hero onSearch={handleSearch} />
       <div className="container mx-auto px-4">
-        {/* Remove NLPQueryForm here, since it's now in Hero and wired up */}
-        <ResultsSection recommendations={recommendations} extraction={extraction} />
+        <ResultsSection recommendations={recommendations} extraction={extraction} userLocation={userLocation} />
       </div>
       {/* <PopularCities /> */}
       {/* <FoodCategories /> */}
