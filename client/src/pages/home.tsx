@@ -63,7 +63,7 @@ const Home: React.FC = () => {
     <>
       <Hero onSearch={handleSearch} />
       <div className="container mx-auto px-4">
-        <ResultsSection recommendations={recommendations} extraction={extraction} userLocation={userLocation} />
+        <ResultsSection recommendations={recommendations} extraction={extraction} />
       </div>
       {/* <PopularCities /> */}
       {/* <FoodCategories /> */}

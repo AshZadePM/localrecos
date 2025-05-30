@@ -11,33 +11,7 @@ import axios from "axios";
 const cache = new NodeCache({ stdTTL: 3600 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
   // prefix all routes with /api
-
-  // API endpoint to get available cities
-  app.get("/api/cities", async (_req: Request, res: Response) => {
-    try {
-      // In a real app, this would dynamically fetch cities from the database
-      // For now, return a static list of popular cities
-      const popularCities = [
-        { id: "toronto", name: "Toronto" },
-        { id: "nyc", name: "New York" },
-        { id: "chicago", name: "Chicago" },
-        { id: "sf", name: "San Francisco" },
-        { id: "ottawa", name: "Ottawa" },
-        { id: "vancouver", name: "Vancouver" },
-        { id: "austin", name: "Austin" },
-        { id: "boston", name: "Boston" },
-        { id: "seattle", name: "Seattle" },
-        { id: "portland", name: "Portland" }
-      ];
-      
-      res.json(popularCities);
-    } catch (error) {
-      console.error("Error fetching cities:", error);
-      res.status(500).json({ message: "Failed to fetch cities" });
-    }
-  });
 
   // Natural language search API that connects to Gemini
   app.post("/api/nlp-search", async (req: Request, res: Response) => {
@@ -141,32 +115,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API endpoint to get restaurant details by ID
-  app.get("/api/restaurants/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid restaurant ID" });
-      }
-      
-      const restaurant = await storage.getRestaurant(id);
-      
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
-      
-      const recommendations = await storage.getRecommendationsByRestaurant(id);
-      
-      res.json({
-        ...restaurant,
-        recommendations
-      });
-    } catch (error) {
-      console.error("Error fetching restaurant:", error);
-      res.status(500).json({ message: "Failed to fetch restaurant details" });
-    }
-  });
 
   // API endpoint to get restaurants by city
   app.get("/api/cities/:city/restaurants", async (req: Request, res: Response) => {
